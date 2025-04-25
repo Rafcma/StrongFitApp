@@ -1,0 +1,82 @@
+﻿@model Dictionary<string, object>
+@{
+    ViewData["Title"] = "Status do Sistema";
+}
+
+<div class="card fade-in">
+    <div class="card-header">
+        <h2 class="mb-0">Status do Sistema</h2>
+    </div>
+    <div class="card-body">
+        <h4 class="mb-3">Autenticação</h4>
+        <ul class="list-group mb-4">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Autenticado
+                <span class="badge @(Model["IsAuthenticated"].ToString() == "True" ? "bg-success" : "bg-danger")">
+                    @Model["IsAuthenticated"]
+                </span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Usuário
+                <span class="badge bg-primary">@Model["UserName"]</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Perfis
+                @{
+                    var roles = (List<string>)Model["Roles"];
+                    if (roles.Any())
+                    {
+                        foreach (var role in roles)
+                        {
+                            <span class="badge bg-info me-1">@role</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Nenhum</span>
+                    }
+                }
+            </li>
+        </ul>
+
+        <h4 class="mb-3">Entidades</h4>
+        <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Personals
+                <span class="badge bg-primary">@Model["PersonalCount"]</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Alunos
+                <span class="badge bg-primary">@Model["AlunoCount"]</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Treinos
+                <span class="badge bg-primary">@Model["TreinoCount"]</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Exercícios
+                <span class="badge bg-primary">@Model["ExercicioCount"]</span>
+            </li>
+        </ul>
+    </div>
+    <div class="card-footer">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+            <i class="fas fa-home me-2"></i>Voltar para Home
+        </a>
+        <a asp-controller="Diagnostic" asp-action="CreateAdmin" class="btn btn-success">
+            <i class="fas fa-user-shield me-2"></i>Criar Usuário Admin
+        </a>
+        <a asp-controller="Personals" asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-user-tie me-2"></i>Ir para Personals
+        </a>
+        <a asp-controller="Alunos" asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-users me-2"></i>Ir para Alunos
+        </a>
+        <a asp-controller="Treinos" asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-calendar-alt me-2"></i>Ir para Treinos
+        </a>
+        <a asp-controller="Exercicios" asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-running me-2"></i>Ir para Exercícios
+        </a>
+    </div>
+</div>

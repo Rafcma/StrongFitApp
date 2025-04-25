@@ -1,0 +1,58 @@
+﻿@model Treino
+
+@{
+    ViewData["Title"] = "Editar Treino";
+}
+
+<h1>Editar Treino</h1>
+
+<div class="card">
+    <div class="card-header">
+        <h4>Informações do Treino</h4>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="TreinoID" />
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="AlunoID" class="control-label"></label>
+                        <select asp-for="AlunoID" class="form-control" asp-items="ViewBag.AlunoID"></select>
+                        <span asp-validation-for="AlunoID" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="Data" class="control-label"></label>
+                        <input asp-for="Data" class="form-control" type="date" />
+                        <span asp-validation-for="Data" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label asp-for="Hora" class="control-label"></label>
+                        <input asp-for="Hora" class="form-control" type="time" />
+                        <span asp-validation-for="Hora" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group mt-4">
+                <label class="control-label">Exercícios (selecione pelo menos 4)</label>
+                <select name="exercicioIds" class="form-control" multiple asp-items="ViewBag.ExerciciosDisponiveis" style="height: 200px;"></select>
+                <small class="text-muted">Segure Ctrl para selecionar múltiplos exercícios</small>
+            </div>
+            
+            <div class="form-group mt-4">
+                <input type="submit" value="Salvar" class="btn btn-primary" />
+                <a asp-action="Index" class="btn btn-secondary">Voltar para a Lista</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
