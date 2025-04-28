@@ -58,7 +58,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
 
             returnUrl ??= Url.Content("~/");
 
-            // Limpar os cookies externos existentes
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
             ReturnUrl = returnUrl;
@@ -85,10 +84,8 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                 {
                     _logger.LogInformation("Usuário logado com sucesso.");
 
-                    // Obter os roles do usuário
                     var roles = await _userManager.GetRolesAsync(user);
 
-                    // Redirecionar com base no role
                     if (roles.Contains("Admin"))
                     {
                         return RedirectToAction("Index", "Home");
@@ -102,7 +99,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                         return RedirectToAction("MeusTreinos", "Treinos");
                     }
 
-                    // Fallback para a página inicial
                     return LocalRedirect(returnUrl);
                 }
 
@@ -123,7 +119,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                 }
             }
 
-            // Se chegamos até aqui, algo falhou, redisplay form
             return Page();
         }
     }

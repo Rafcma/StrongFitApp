@@ -21,14 +21,12 @@ namespace StrongFitApp.Models
         [StringLength(50)]
         public string Categoria { get; set; } = string.Empty;
 
-        // Adicionando as propriedades que estavam faltando
         [Range(1, 20, ErrorMessage = "O número de séries deve estar entre 1 e 20")]
         public int Series { get; set; } = 3;
 
         [Range(1, 100, ErrorMessage = "O número de repetições deve estar entre 1 e 100")]
         public int Repeticoes { get; set; } = 12;
 
-        // Relacionamento com Treinos (muitos para muitos)
         public virtual ICollection<Treino>? Treinos { get; set; }
     }
 }

@@ -236,7 +236,6 @@ body {
     background-color: rgba(0, 0, 0, 0.02);
 }
 
-/* Badges */
 .badge {
     padding: 5px 8px;
     font-weight: 500;
@@ -281,7 +280,7 @@ body {
     color: var(--cor-primaria);
 }
 
-/* Responsividade */
+/* Responsivo */
 @media (max-width: 768px) {
     .action-buttons {
         flex-direction: column;
@@ -339,12 +338,10 @@ body {
     font-weight: bold;
 }
 
-/* Box shadow */
 .box-shadow {
     box-shadow: 0 .25rem .75rem rgba(0, 0, 0, 0.05);
 }
 
-/* Alerts */
 .alert {
     border-radius: 8px;
     border: none;
@@ -445,7 +442,7 @@ body {
     margin: 0 auto;
 }
 
-/* Ajustes para o tema roxo */
+/* tema roxo */
 .text-primary {
     color: var(--cor-primaria) !important;
 }
@@ -458,12 +455,12 @@ body {
     border-color: var(--cor-primaria) !important;
 }
 
-/* Ajustes para o layout */
+/* layout */
 main {
     min-height: calc(100vh - 160px);
 }
 
-/* Ajustes para os cards na home */
+/* home */
 .home-container .card {
     height: 100%;
 }
@@ -474,7 +471,7 @@ main {
     justify-content: space-between;
 }
 
-/* Ajustes para as tabelas */
+/* tabelas */
 .table-container {
     background-color: white;
     border-radius: 8px;
@@ -483,7 +480,7 @@ main {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Estilos para a landing page melhorada */
+/* css landing page */
 .background-icons {
     position: absolute;
     top: 0;
@@ -507,7 +504,7 @@ main {
         z-index: 1;
     }
 
-/* Estilos para os depoimentos */
+/* comentarios pag principalç */
 .testimonials {
     background-color: #f8f9fa;
     position: relative;

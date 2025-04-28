@@ -108,20 +108,19 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function() {
-            // Função para mostrar/esconder campos com base no tipo de usuário
             function toggleFields() {
                 var selectedType = $('#Input_UserType').val();
 
                 if (selectedType === 'Personal') {
                     $('.personal-field').show();
                     $('.aluno-field').hide();
-                    // Limpar valores dos campos de aluno
+                    // Limpar valores dos campo
                     $('#Input_PersonalID').val('');
                     $('#Input_DataNascimento').val('');
                 } else if (selectedType === 'Aluno') {
                     $('.personal-field').hide();
                     $('.aluno-field').show();
-                    // Limpar valores dos campos de personal
+                    // Limpar valores dos campos 
                     $('#Input_Especialidade').val('');
                 } else {
                     $('.personal-field').hide();
@@ -133,10 +132,8 @@
                 }
             }
 
-            // Executar ao carregar a página
             toggleFields();
 
-            // Executar quando o select mudar
             $('#Input_UserType').change(toggleFields);
         });
     </script>

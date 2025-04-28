@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<StrongFitContext>(options =>
     options.UseSqlServer(connectionString));
@@ -21,7 +20,6 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// Inicializar o banco de dados de forma assíncrona
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -31,10 +29,9 @@ using (var scope = app.Services.CreateScope())
     {
         var dbContext = services.GetRequiredService<StrongFitContext>();
 
-        // Verificar se o banco de dados existe e criar se não existir
         await dbContext.Database.EnsureCreatedAsync();
 
-        // Executar script SQL para adicionar colunas faltantes
+        // script SQL para adicionar colunas faltantes
         var sql = @"
             -- Verificar se a coluna Series já existe e adicioná-la se não existir
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Exercicios]') AND name = 'Series')
@@ -67,7 +64,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -75,7 +71,6 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -87,7 +82,6 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Alterar a rota padrão para apontar para o LandingController
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Landing}/{action=Index}/{id?}");

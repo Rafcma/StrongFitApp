@@ -24,14 +24,13 @@ namespace StrongFitApp.Controllers
             _userManager = userManager;
         }
 
-        // GET: Alunos
         public async Task<IActionResult> Index()
         {
             var currentUser = await _userManager.GetUserAsync(User);
 
             if (User.IsInRole("Admin"))
             {
-                // Administradores veem todos os alunos
+                // Admin ve todos os alunos
                 var alunos = await _context.Alunos
                     .Include(a => a.Personal)
                     .ToListAsync();
@@ -39,7 +38,7 @@ namespace StrongFitApp.Controllers
             }
             else if (User.IsInRole("Personal"))
             {
-                // Personals veem apenas seus alunos
+                // Personal ve apenas seus alunos
                 var personal = await _context.Personals
                     .FirstOrDefaultAsync(p => p.Email == currentUser.Email);
 
@@ -58,7 +57,6 @@ namespace StrongFitApp.Controllers
             return Forbid();
         }
 
-        // GET: Alunos/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null || _context.Alunos == null)
@@ -77,7 +75,7 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            // Verificar se o personal atual tem acesso a este aluno
+            // personal atual tem acesso a este aluno
             if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
             {
                 return Forbid();
@@ -86,21 +84,18 @@ namespace StrongFitApp.Controllers
             return View(aluno);
         }
 
-        // GET: Alunos/Create
         public async Task<IActionResult> Create()
         {
             await CarregarPersonals();
             return View();
         }
 
-        // POST: Alunos/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("AlunoID,Nome,Email,Data_Nascimento,Telefone,Instagram,Observacoes,PersonalID")] Aluno aluno)
         {
             if (ModelState.IsValid)
             {
-                // Verificar se o personal atual tem acesso para criar alunos para este personal
                 if (User.IsInRole("Personal") && !await VerificarAcessoAoPersonal(aluno.PersonalID))
                 {
                     return Forbid();
@@ -114,7 +109,6 @@ namespace StrongFitApp.Controllers
             return View(aluno);
         }
 
-        // GET: Alunos/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null || _context.Alunos == null)
@@ -128,7 +122,6 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            // Verificar se o personal atual tem acesso a este aluno
             if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
             {
                 return Forbid();
@@ -138,7 +131,6 @@ namespace StrongFitApp.Controllers
             return View(aluno);
         }
 
-        // POST: Alunos/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("AlunoID,Nome,Email,Data_Nascimento,Telefone,Instagram,Observacoes,PersonalID")] Aluno aluno)
@@ -148,7 +140,6 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            // Verificar se o personal atual tem acesso a este aluno
             if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
             {
                 return Forbid();
@@ -178,7 +169,6 @@ namespace StrongFitApp.Controllers
             return View(aluno);
         }
 
-        // GET: Alunos/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null || _context.Alunos == null)
@@ -195,7 +185,6 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            // Verificar se o personal atual tem acesso a este aluno
             if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
             {
                 return Forbid();
@@ -204,7 +193,6 @@ namespace StrongFitApp.Controllers
             return View(aluno);
         }
 
-        // POST: Alunos/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -220,7 +208,6 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            // Verificar se o personal atual tem acesso a este aluno
             if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
             {
                 return Forbid();
@@ -240,12 +227,10 @@ namespace StrongFitApp.Controllers
         {
             if (User.IsInRole("Admin"))
             {
-                // Administradores veem todos os personals
                 ViewData["PersonalID"] = new SelectList(await _context.Personals.ToListAsync(), "PersonalID", "Nome");
             }
             else if (User.IsInRole("Personal"))
             {
-                // Personals veem apenas a si mesmos
                 var currentUser = await _userManager.GetUserAsync(User);
                 var personal = await _context.Personals.FirstOrDefaultAsync(p => p.Email == currentUser.Email);
 

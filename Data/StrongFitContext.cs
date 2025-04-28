@@ -20,19 +20,19 @@ namespace StrongFitApp.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configurar relacionamento muitos-para-muitos entre Treino e Exercicio
+            // relacionamento muitos-para-muitos entre Treino e Exercicio
             modelBuilder.Entity<Treino>()
                 .HasMany(t => t.Exercicios)
                 .WithMany(e => e.Treinos)
                 .UsingEntity(j => j.ToTable("TreinoExercicio"));
 
-            // Configurar relacionamento entre Aluno e Personal
+            //relacionamento entre Aluno e Personal
             modelBuilder.Entity<Aluno>()
                 .HasOne(a => a.Personal)
                 .WithMany(p => p.Alunos)
                 .HasForeignKey(a => a.PersonalID);
 
-            // Configurar relacionamento entre Treino e Aluno
+            // relacionamento entre Treino e Aluno
             modelBuilder.Entity<Treino>()
                 .HasOne(t => t.Aluno)
                 .WithMany(a => a.Treinos)

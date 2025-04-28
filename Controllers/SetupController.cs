@@ -8,7 +8,6 @@ using System.Linq;
 
 namespace StrongFitApp.Controllers
 {
-    // Este controller não requer autenticação para permitir a configuração inicial
     public class SetupController : Controller
     {
         private readonly StrongFitContext _context;
@@ -25,13 +24,11 @@ namespace StrongFitApp.Controllers
             _roleManager = roleManager;
         }
 
-        // GET: /Setup/Initialize
         public IActionResult Initialize()
         {
             return View();
         }
 
-        // POST: /Setup/Initialize
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Initialize(string confirm)
@@ -44,7 +41,7 @@ namespace StrongFitApp.Controllers
 
             try
             {
-                // Verificar se já existe um usuário admin
+                // checa se existe um usuário admin
                 var adminExists = await _userManager.Users.AnyAsync(u => u.Email == "admin@strongfit.com");
 
                 if (adminExists)
@@ -53,7 +50,6 @@ namespace StrongFitApp.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
-                // Criar roles se não existirem
                 string[] roleNames = { "Admin", "Personal", "Aluno" };
                 foreach (var roleName in roleNames)
                 {
@@ -63,7 +59,6 @@ namespace StrongFitApp.Controllers
                     }
                 }
 
-                // Criar usuário admin
                 var adminUser = new IdentityUser
                 {
                     UserName = "admin@strongfit.com",
@@ -77,7 +72,7 @@ namespace StrongFitApp.Controllers
                 {
                     await _userManager.AddToRoleAsync(adminUser, "Admin");
 
-                    // Inicializar dados básicos
+                    // Inicia osdados 
                     await DbInitializer.InitializeDatabaseAsync(_context);
 
                     TempData["Message"] = "Sistema inicializado com sucesso! Você pode fazer login com admin@strongfit.com e senha Admin@123";

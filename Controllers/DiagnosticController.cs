@@ -63,7 +63,6 @@ namespace StrongFitApp.Controllers
 
             try
             {
-                // Verificar tabelas principais
                 tables.Add(new TableStatus
                 {
                     Name = "AspNetUsers",
@@ -108,7 +107,6 @@ namespace StrongFitApp.Controllers
             }
             catch (Exception ex)
             {
-                // Adicionar informações sobre o erro
                 tables.Add(new TableStatus
                 {
                     Name = "Erro",
@@ -126,14 +124,13 @@ namespace StrongFitApp.Controllers
         {
             try
             {
-                // Remover todos os dados existentes
+                // Removem todos os dados existentes
                 await _context.Database.ExecuteSqlRawAsync("DELETE FROM TreinoExercicio");
                 await _context.Database.ExecuteSqlRawAsync("DELETE FROM Treinos");
                 await _context.Database.ExecuteSqlRawAsync("DELETE FROM Exercicios");
                 await _context.Database.ExecuteSqlRawAsync("DELETE FROM Alunos");
                 await _context.Database.ExecuteSqlRawAsync("DELETE FROM Personals");
 
-                // Inicializar o banco de dados com dados de exemplo
                 await DbInitializer.InitializeDatabaseAsync(_context);
 
                 TempData["Message"] = "Banco de dados reinicializado com sucesso!";
@@ -151,7 +148,7 @@ namespace StrongFitApp.Controllers
         {
             try
             {
-                // Inicializar o banco de dados com dados de exemplo
+                // banco de dados com exemplo
                 await DbInitializer.InitializeDatabaseAsync(_context);
 
                 TempData["Message"] = "Dados de exemplo adicionados com sucesso!";
@@ -169,7 +166,6 @@ namespace StrongFitApp.Controllers
         {
             try
             {
-                // Verificar se existe pelo menos um personal
                 var personal = await _context.Personals.FirstOrDefaultAsync();
                 if (personal == null)
                 {
@@ -177,8 +173,7 @@ namespace StrongFitApp.Controllers
                     return RedirectToAction("Status");
                 }
 
-                // Criar um usuário de teste
-                var testEmail = $"teste_{DateTime.Now.Ticks}@strongfit.com";
+                var testEmail = $"teste_{DateTime.Now.Ticks}@strongfit.com"; //teste de usuari
                 var user = new IdentityUser { UserName = testEmail, Email = testEmail, EmailConfirmed = true };
                 var result = await _userManager.CreateAsync(user, "Teste@123");
 
@@ -188,7 +183,7 @@ namespace StrongFitApp.Controllers
                     return RedirectToAction("Status");
                 }
 
-                // Adicionar à role Aluno
+                // Adicionar role Aluno
                 if (!await _roleManager.RoleExistsAsync("Aluno"))
                 {
                     await _roleManager.CreateAsync(new IdentityRole("Aluno"));

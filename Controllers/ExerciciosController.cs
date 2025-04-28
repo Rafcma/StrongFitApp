@@ -21,13 +21,11 @@ namespace StrongFitApp.Controllers
             _context = context;
         }
 
-        // GET: Exercicios
         public async Task<IActionResult> Index()
         {
             return View(await _context.Exercicios.ToListAsync());
         }
 
-        // GET: Exercicios/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null || _context.Exercicios == null)
@@ -45,10 +43,8 @@ namespace StrongFitApp.Controllers
             return View(exercicio);
         }
 
-        // GET: Exercicios/Create
         public IActionResult Create()
         {
-            // Lista de categorias para o dropdown
             ViewBag.Categorias = new List<string>
             {
                 "Peito",
@@ -65,7 +61,6 @@ namespace StrongFitApp.Controllers
             return View();
         }
 
-        // POST: Exercicios/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("ExercicioID,Nome,Descricao,Categoria,Series,Repeticoes")] Exercicio exercicio)
@@ -77,7 +72,6 @@ namespace StrongFitApp.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Lista de categorias para o dropdown em caso de erro
             ViewBag.Categorias = new List<string>
             {
                 "Peito",
@@ -94,7 +88,6 @@ namespace StrongFitApp.Controllers
             return View(exercicio);
         }
 
-        // GET: Exercicios/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null || _context.Exercicios == null)
@@ -108,7 +101,6 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            // Lista de categorias para o dropdown
             ViewBag.Categorias = new List<string>
             {
                 "Peito",
@@ -125,7 +117,6 @@ namespace StrongFitApp.Controllers
             return View(exercicio);
         }
 
-        // POST: Exercicios/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("ExercicioID,Nome,Descricao,Categoria,Series,Repeticoes")] Exercicio exercicio)
@@ -156,7 +147,6 @@ namespace StrongFitApp.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Lista de categorias para o dropdown em caso de erro
             ViewBag.Categorias = new List<string>
             {
                 "Peito",
@@ -173,7 +163,6 @@ namespace StrongFitApp.Controllers
             return View(exercicio);
         }
 
-        // GET: Exercicios/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null || _context.Exercicios == null)
@@ -191,7 +180,6 @@ namespace StrongFitApp.Controllers
             return View(exercicio);
         }
 
-        // POST: Exercicios/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

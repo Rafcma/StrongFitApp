@@ -22,7 +22,6 @@ namespace StrongFitApp.Models
         [StringLength(100)]
         public string Especialidade { get; set; } = string.Empty;
 
-        // Propriedades opcionais
         [StringLength(20)]
         public string? Telefone { get; set; }
 

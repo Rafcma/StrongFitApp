@@ -24,7 +24,6 @@ namespace StrongFitApp.Controllers
             _userManager = userManager;
         }
 
-        // GET: Treinos
         [Authorize(Roles = "Admin, Personal")]
         public async Task<IActionResult> Index()
         {
@@ -32,7 +31,6 @@ namespace StrongFitApp.Controllers
             return View(await applicationDbContext.ToListAsync());
         }
 
-        // GET: Treinos/Details/5
         [Authorize(Roles = "Admin, Personal")]
         public async Task<IActionResult> Details(int? id)
         {
@@ -53,17 +51,14 @@ namespace StrongFitApp.Controllers
             return View(treino);
         }
 
-        // GET: Treinos/Create
         [Authorize(Roles = "Admin, Personal")]
         public IActionResult Create()
         {
             ViewData["AlunoID"] = new SelectList(_context.Alunos, "AlunoID", "Nome");
-            // Carregar a lista de exercícios disponíveis
             ViewData["ExerciciosDisponiveis"] = new MultiSelectList(_context.Exercicios, "ExercicioID", "Nome");
             return View();
         }
 
-        // POST: Treinos/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin, Personal")]
@@ -74,7 +69,6 @@ namespace StrongFitApp.Controllers
                 _context.Add(treino);
                 await _context.SaveChangesAsync();
 
-                // Adicionar exercícios selecionados ao treino
                 if (selectedExercicios != null && selectedExercicios.Length > 0)
                 {
                     foreach (var exercicioId in selectedExercicios)
@@ -99,7 +93,6 @@ namespace StrongFitApp.Controllers
             return View(treino);
         }
 
-        // GET: Treinos/Edit/5
         [Authorize(Roles = "Admin, Personal")]
         public async Task<IActionResult> Edit(int? id)
         {
@@ -119,10 +112,8 @@ namespace StrongFitApp.Controllers
 
             ViewData["AlunoID"] = new SelectList(_context.Alunos, "AlunoID", "Nome", treino.AlunoID);
 
-            // Carregar a lista de exercícios disponíveis
             var exerciciosDisponiveis = await _context.Exercicios.ToListAsync();
 
-            // Obter os IDs dos exercícios já associados ao treino
             var exerciciosSelecionados = treino.Exercicios != null
                 ? treino.Exercicios.Select(e => e.ExercicioID).ToArray()
                 : Array.Empty<int>();
@@ -133,7 +124,6 @@ namespace StrongFitApp.Controllers
             return View(treino);
         }
 
-        // POST: Treinos/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin, Personal")]
@@ -148,7 +138,6 @@ namespace StrongFitApp.Controllers
             {
                 try
                 {
-                    // Obter o treino existente com seus exercícios
                     var treinoExistente = await _context.Treinos
                         .Include(t => t.Exercicios)
                         .FirstOrDefaultAsync(t => t.TreinoID == id);
@@ -158,13 +147,11 @@ namespace StrongFitApp.Controllers
                         return NotFound();
                     }
 
-                    // Atualizar propriedades básicas
                     treinoExistente.AlunoID = treino.AlunoID;
                     treinoExistente.Data = treino.Data;
                     treinoExistente.Hora = treino.Hora;
                     treinoExistente.Observacoes = treino.Observacoes;
 
-                    // Limpar exercícios existentes
                     if (treinoExistente.Exercicios != null)
                     {
                         treinoExistente.Exercicios.Clear();
@@ -174,7 +161,6 @@ namespace StrongFitApp.Controllers
                         treinoExistente.Exercicios = new List<Exercicio>();
                     }
 
-                    // Adicionar exercícios selecionados
                     if (selectedExercicios != null && selectedExercicios.Length > 0)
                     {
                         foreach (var exercicioId in selectedExercicios)
@@ -207,7 +193,6 @@ namespace StrongFitApp.Controllers
             return View(treino);
         }
 
-        // GET: Treinos/Delete/5
         [Authorize(Roles = "Admin, Personal")]
         public async Task<IActionResult> Delete(int? id)
         {
@@ -227,7 +212,6 @@ namespace StrongFitApp.Controllers
             return View(treino);
         }
 
-        // POST: Treinos/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin, Personal")]
@@ -252,7 +236,6 @@ namespace StrongFitApp.Controllers
             return (_context.Treinos?.Any(e => e.TreinoID == id)).GetValueOrDefault();
         }
 
-        // GET: Treinos/MeusTreinos
         [Authorize(Roles = "Aluno")]
         public async Task<IActionResult> MeusTreinos()
         {

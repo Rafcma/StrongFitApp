@@ -33,7 +33,6 @@ namespace StrongFitApp.Controllers
         [HttpPost]
         public async Task<IActionResult> SeedDatabase()
         {
-            // Usar o DbInitializer em vez de DataSeeder
             try
             {
                 // Chamar o método de inicialização do banco de dados
@@ -48,27 +47,24 @@ namespace StrongFitApp.Controllers
             return RedirectToAction("Index");
         }
 
-        // Método para exibir a view SeedData
+        // view SeedData
         [HttpGet]
         public IActionResult SeedData()
         {
             return View();
         }
 
-        // Método para processar o formulário quando o botão for clicado
         [HttpPost]
         public async Task<IActionResult> SeedDataConfirmed()
         {
             try
             {
-                // Verificar se temos acesso ao UserManager e RoleManager
                 if (_userManager == null || _roleManager == null)
                 {
                     TempData["Error"] = "Não foi possível acessar os serviços de gerenciamento de usuários.";
                     return RedirectToAction("Index", "Home");
                 }
 
-                // Inicializar o banco de dados com dados de exemplo e criar o admin
                 await DbInitializer.InitializeAsync(_context, _userManager, _roleManager);
 
                 TempData["Message"] = "Banco de dados populado com sucesso! Conta de admin criada.";

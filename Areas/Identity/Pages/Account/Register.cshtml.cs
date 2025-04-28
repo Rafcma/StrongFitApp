@@ -109,7 +109,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
         {
             try
             {
-                // Verificar se a tabela existe e tem as colunas necessárias
                 if (_context.Database.CanConnect())
                 {
                     var personals = await _context.Personals.ToListAsync();
@@ -135,15 +134,12 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
 
             try
             {
-                // Adicionar log para depuração
                 _logger.LogInformation("Iniciando processo de registro para: {Email}, Tipo: {UserType}", Input.Email, Input.UserType);
 
                 ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
-                // Recarregar a lista de personals para o caso de erro e precisar mostrar a página novamente
                 await CarregarPersonals();
 
-                // Validação manual para o tipo de usuário Aluno que precisa de um Personal
                 if (Input.UserType == "Aluno" && !Input.PersonalID.HasValue)
                 {
                     ModelState.AddModelError("Input.PersonalID", "É necessário selecionar um Personal.");
@@ -155,7 +151,7 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                 {
                     _logger.LogInformation("ModelState válido, prosseguindo com o registro");
 
-                    // Verificar se o email já está em uso
+                    // Verificar o email
                     var existingUser = await _userManager.FindByEmailAsync(Input.Email);
                     if (existingUser != null)
                     {
@@ -164,7 +160,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                         return Page();
                     }
 
-                    // Criar o usuário
                     var user = new IdentityUser { UserName = Input.Email, Email = Input.Email, EmailConfirmed = true };
                     var result = await _userManager.CreateAsync(user, Input.Password);
 
@@ -172,7 +167,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                     {
                         _logger.LogInformation("Usuário criado com sucesso: {Email}", Input.Email);
 
-                        // Verificar se a role existe, se não, criar
                         if (!await _roleManager.RoleExistsAsync(Input.UserType))
                         {
                             _logger.LogInformation("Criando role: {Role}", Input.UserType);
@@ -189,7 +183,7 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                             }
                         }
 
-                        // Adicionar usuário à role
+                        // Adicionar usuário
                         _logger.LogInformation("Adicionando usuário à role: {Role}", Input.UserType);
                         var addToRoleResult = await _userManager.AddToRoleAsync(user, Input.UserType);
                         if (!addToRoleResult.Succeeded)
@@ -203,13 +197,13 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                             return Page();
                         }
 
-                        // Criar entidade correspondente (Personal ou Aluno)
+                        // Criar entidade correspondente Personal; Aluno;
                         try
                         {
                             if (Input.UserType == "Personal")
                             {
                                 _logger.LogInformation("Criando personal: {Nome}", Input.Nome);
-                                // Verificar se já existe um personal com este email
+                                // Verificar se tem um personal com este email
                                 var existingPersonal = await _context.Personals.FirstOrDefaultAsync(p => p.Email == Input.Email);
                                 if (existingPersonal != null)
                                 {
@@ -238,7 +232,7 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                             else if (Input.UserType == "Aluno")
                             {
                                 _logger.LogInformation("Criando aluno: {Nome}", Input.Nome);
-                                // Verificar se já existe um aluno com este email
+                                // Verificar se tem aluno com o email
                                 var existingAluno = await _context.Alunos.FirstOrDefaultAsync(a => a.Email == Input.Email);
                                 if (existingAluno != null)
                                 {
@@ -248,7 +242,7 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                                     return Page();
                                 }
 
-                                // Verificar se o personal existe
+                                // Verifica se o personal existe
                                 if (Input.PersonalID.HasValue)
                                 {
                                     var personal = await _context.Personals.FindAsync(Input.PersonalID.Value);
@@ -270,7 +264,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                                     return Page();
                                 }
 
-                                // Log dos valores que serão usados para criar o aluno
                                 _logger.LogInformation("Valores para criar aluno: Nome={Nome}, Email={Email}, DataNascimento={DataNascimento}, PersonalID={PersonalID}",
                                     Input.Nome, Input.Email, Input.DataNascimento, Input.PersonalID);
 
@@ -299,7 +292,7 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                             }
                             else if (Input.UserType == "Admin")
                             {
-                                // Para Admin, não precisamos criar entidade adicional
+                                // Para Admin
                                 _logger.LogInformation("Criando admin: {Email}", Input.Email);
                                 await _signInManager.SignInAsync(user, isPersistent: false);
                                 return LocalRedirect("~/Home/Index");
@@ -309,10 +302,8 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                         {
                             _logger.LogError(dbEx, "Erro ao salvar no banco de dados");
 
-                            // Remover o usuário criado já que não conseguimos salvar a entidade
                             await _userManager.DeleteAsync(user);
 
-                            // Tentar obter detalhes mais específicos do erro
                             if (dbEx.InnerException != null)
                             {
                                 ModelState.AddModelError(string.Empty, $"Erro ao salvar no banco de dados: {dbEx.InnerException.Message}");
@@ -329,7 +320,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                         {
                             _logger.LogError(ex, "Erro ao criar entidade");
 
-                            // Remover o usuário criado já que não conseguimos salvar a entidade
                             await _userManager.DeleteAsync(user);
 
                             ModelState.AddModelError(string.Empty, $"Erro ao criar entidade: {ex.Message}");
@@ -357,7 +347,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
             }
             catch (Exception ex)
             {
-                // Log da exceção
                 _logger.LogError(ex, "Erro ao registrar usuário: {Message}", ex.Message);
 
                 // Tentar obter detalhes mais específicos do erro
@@ -372,7 +361,6 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                 }
             }
 
-            // Se chegamos até aqui, algo falhou, redisplay form
             return Page();
         }
     }

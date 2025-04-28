@@ -10,18 +10,13 @@ namespace StrongFitApp.Data
 {
     public static class DbInitializer
     {
-        // Modificar o método InitializeAsync para garantir que ele não tente criar o admin novamente
-        // se já estiver sendo chamado pelo SetupController
 
         public static async Task InitializeAsync(StrongFitContext context, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
         {
-            // Garantir que o banco de dados foi criado
             await context.Database.EnsureCreatedAsync();
 
-            // Inicializar o banco de dados com dados básicos
             await InitializeDatabaseAsync(context);
 
-            // Verificar se as roles já existem
             string[] roleNames = { "Admin", "Personal", "Aluno" };
             foreach (var roleName in roleNames)
             {
@@ -31,7 +26,6 @@ namespace StrongFitApp.Data
                 }
             }
 
-            // Verificar se já existe um usuário admin
             var adminEmail = "admin@strongfit.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
@@ -51,7 +45,6 @@ namespace StrongFitApp.Data
                 }
             }
 
-            // Verificar se já existe um personal
             if (!context.Personals.Any())
             {
                 var personalEmail = "personal@strongfit.com";
@@ -87,13 +80,10 @@ namespace StrongFitApp.Data
             }
         }
 
-        // Método específico para inicialização do banco de dados que pode ser chamado pelo AdminController
         public static async Task InitializeDatabaseAsync(StrongFitContext context)
         {
-            // Verificar se já existem exercícios cadastrados
             if (!context.Exercicios.Any())
             {
-                // Adicionar exercícios de exemplo
                 var exercicios = new List<Exercicio>
                 {
                     new Exercicio

@@ -18,7 +18,6 @@ namespace StrongFitApp.Controllers
             _context = context;
         }
 
-        // GET: Personals
         public async Task<IActionResult> Index()
         {
             var personals = await _context.Personals
@@ -27,7 +26,6 @@ namespace StrongFitApp.Controllers
             return View(personals);
         }
 
-        // GET: Personals/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -46,13 +44,11 @@ namespace StrongFitApp.Controllers
             return View(personal);
         }
 
-        // GET: Personals/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Personals/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("PersonalID,Nome,Especialidade")] Personal personal)
@@ -66,7 +62,6 @@ namespace StrongFitApp.Controllers
             return View(personal);
         }
 
-        // GET: Personals/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -82,7 +77,6 @@ namespace StrongFitApp.Controllers
             return View(personal);
         }
 
-        // POST: Personals/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("PersonalID,Nome,Especialidade")] Personal personal)
@@ -115,7 +109,6 @@ namespace StrongFitApp.Controllers
             return View(personal);
         }
 
-        // GET: Personals/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -133,7 +126,6 @@ namespace StrongFitApp.Controllers
             return View(personal);
         }
 
-        // POST: Personals/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
