@@ -1,35 +1,67 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using StrongFitApp.Data;
 using StrongFitApp.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace StrongFitApp.Controllers
 {
-    [Authorize(Roles = "Personal")]
+    [Authorize(Roles = "Admin, Personal")]
     public class AlunosController : Controller
     {
         private readonly StrongFitContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public AlunosController(StrongFitContext context)
+        public AlunosController(StrongFitContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: Alunos
         public async Task<IActionResult> Index()
         {
-            var alunos = await _context.Alunos
-                .Include(a => a.Personal)
-                .ToListAsync();
-            return View(alunos);
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            if (User.IsInRole("Admin"))
+            {
+                // Administradores veem todos os alunos
+                var alunos = await _context.Alunos
+                    .Include(a => a.Personal)
+                    .ToListAsync();
+                return View(alunos);
+            }
+            else if (User.IsInRole("Personal"))
+            {
+                // Personals veem apenas seus alunos
+                var personal = await _context.Personals
+                    .FirstOrDefaultAsync(p => p.Email == currentUser.Email);
+
+                if (personal == null)
+                {
+                    return NotFound();
+                }
+
+                var alunos = await _context.Alunos
+                    .Include(a => a.Personal)
+                    .Where(a => a.PersonalID == personal.PersonalID)
+                    .ToListAsync();
+                return View(alunos);
+            }
+
+            return Forbid();
         }
 
         // GET: Alunos/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Alunos == null)
             {
                 return NotFound();
             }
@@ -37,41 +69,55 @@ namespace StrongFitApp.Controllers
             var aluno = await _context.Alunos
                 .Include(a => a.Personal)
                 .Include(a => a.Treinos)
+                    .ThenInclude(t => t.Exercicios)
                 .FirstOrDefaultAsync(m => m.AlunoID == id);
+
             if (aluno == null)
             {
                 return NotFound();
+            }
+
+            // Verificar se o personal atual tem acesso a este aluno
+            if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
+            {
+                return Forbid();
             }
 
             return View(aluno);
         }
 
         // GET: Alunos/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            ViewData["PersonalID"] = new SelectList(_context.Personals, "PersonalID", "Nome");
+            await CarregarPersonals();
             return View();
         }
 
         // POST: Alunos/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Nome,Data_Nascimento,Email,Telefone,Instagram,Observacoes,PersonalID")] Aluno aluno)
+        public async Task<IActionResult> Create([Bind("AlunoID,Nome,Email,Data_Nascimento,Telefone,Instagram,Observacoes,PersonalID")] Aluno aluno)
         {
             if (ModelState.IsValid)
             {
+                // Verificar se o personal atual tem acesso para criar alunos para este personal
+                if (User.IsInRole("Personal") && !await VerificarAcessoAoPersonal(aluno.PersonalID))
+                {
+                    return Forbid();
+                }
+
                 _context.Add(aluno);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["PersonalID"] = new SelectList(_context.Personals, "PersonalID", "Nome", aluno.PersonalID);
+            await CarregarPersonals();
             return View(aluno);
         }
 
         // GET: Alunos/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Alunos == null)
             {
                 return NotFound();
             }
@@ -81,18 +127,31 @@ namespace StrongFitApp.Controllers
             {
                 return NotFound();
             }
-            ViewData["PersonalID"] = new SelectList(_context.Personals, "PersonalID", "Nome", aluno.PersonalID);
+
+            // Verificar se o personal atual tem acesso a este aluno
+            if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
+            {
+                return Forbid();
+            }
+
+            await CarregarPersonals();
             return View(aluno);
         }
 
         // POST: Alunos/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("AlunoID,Nome,Data_Nascimento,Email,Telefone,Instagram,Observacoes,PersonalID")] Aluno aluno)
+        public async Task<IActionResult> Edit(int id, [Bind("AlunoID,Nome,Email,Data_Nascimento,Telefone,Instagram,Observacoes,PersonalID")] Aluno aluno)
         {
             if (id != aluno.AlunoID)
             {
                 return NotFound();
+            }
+
+            // Verificar se o personal atual tem acesso a este aluno
+            if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
+            {
+                return Forbid();
             }
 
             if (ModelState.IsValid)
@@ -115,14 +174,14 @@ namespace StrongFitApp.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["PersonalID"] = new SelectList(_context.Personals, "PersonalID", "Nome", aluno.PersonalID);
+            await CarregarPersonals();
             return View(aluno);
         }
 
         // GET: Alunos/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Alunos == null)
             {
                 return NotFound();
             }
@@ -130,9 +189,16 @@ namespace StrongFitApp.Controllers
             var aluno = await _context.Alunos
                 .Include(a => a.Personal)
                 .FirstOrDefaultAsync(m => m.AlunoID == id);
+
             if (aluno == null)
             {
                 return NotFound();
+            }
+
+            // Verificar se o personal atual tem acesso a este aluno
+            if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
+            {
+                return Forbid();
             }
 
             return View(aluno);
@@ -143,34 +209,79 @@ namespace StrongFitApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var aluno = await _context.Alunos.FindAsync(id);
-            if (aluno != null)
+            if (_context.Alunos == null)
             {
-                // Verificar se o aluno tem treinos
-                var temTreinos = await _context.Treinos.AnyAsync(t => t.AlunoID == id);
-                if (temTreinos)
-                {
-                    // Excluir os treinos do aluno
-                    var treinos = await _context.Treinos.Where(t => t.AlunoID == id).ToListAsync();
-                    foreach (var treino in treinos)
-                    {
-                        // Excluir os exercícios do treino
-                        var exercicios = await _context.Exercicios.Where(e => e.TreinoID == treino.TreinoID).ToListAsync();
-                        _context.Exercicios.RemoveRange(exercicios);
-                    }
-                    _context.Treinos.RemoveRange(treinos);
-                }
-
-                _context.Alunos.Remove(aluno);
-                await _context.SaveChangesAsync();
+                return Problem("Entity set 'StrongFitContext.Alunos'  is null.");
             }
 
+            var aluno = await _context.Alunos.FindAsync(id);
+            if (aluno == null)
+            {
+                return NotFound();
+            }
+
+            // Verificar se o personal atual tem acesso a este aluno
+            if (User.IsInRole("Personal") && !await VerificarAcessoAoAluno(aluno.AlunoID))
+            {
+                return Forbid();
+            }
+
+            _context.Alunos.Remove(aluno);
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool AlunoExists(int id)
         {
-            return _context.Alunos.Any(e => e.AlunoID == id);
+            return (_context.Alunos?.Any(e => e.AlunoID == id)).GetValueOrDefault();
+        }
+
+        private async Task CarregarPersonals()
+        {
+            if (User.IsInRole("Admin"))
+            {
+                // Administradores veem todos os personals
+                ViewData["PersonalID"] = new SelectList(await _context.Personals.ToListAsync(), "PersonalID", "Nome");
+            }
+            else if (User.IsInRole("Personal"))
+            {
+                // Personals veem apenas a si mesmos
+                var currentUser = await _userManager.GetUserAsync(User);
+                var personal = await _context.Personals.FirstOrDefaultAsync(p => p.Email == currentUser.Email);
+
+                if (personal != null)
+                {
+                    var personals = new List<Personal> { personal };
+                    ViewData["PersonalID"] = new SelectList(personals, "PersonalID", "Nome");
+                }
+            }
+        }
+
+        private async Task<bool> VerificarAcessoAoAluno(int alunoID)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            var personal = await _context.Personals.FirstOrDefaultAsync(p => p.Email == currentUser.Email);
+
+            if (personal == null)
+            {
+                return false;
+            }
+
+            var aluno = await _context.Alunos.FindAsync(alunoID);
+            return aluno != null && aluno.PersonalID == personal.PersonalID;
+        }
+
+        private async Task<bool> VerificarAcessoAoPersonal(int personalID)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            var personal = await _context.Personals.FirstOrDefaultAsync(p => p.Email == currentUser.Email);
+
+            if (personal == null)
+            {
+                return false;
+            }
+
+            return personal.PersonalID == personalID;
         }
     }
 }

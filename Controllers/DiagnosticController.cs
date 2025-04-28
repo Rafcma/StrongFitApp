@@ -1,170 +1,227 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using StrongFitApp.Data;
-using StrongFitApp.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Identity;
+using System;
+using StrongFitApp.Models;
 
 namespace StrongFitApp.Controllers
 {
-    [AllowAnonymous] // Importante: permitir acesso sem autenticação
+    [Authorize(Roles = "Admin")]
     public class DiagnosticController : Controller
     {
         private readonly StrongFitContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly ILogger<DiagnosticController> _logger;
 
         public DiagnosticController(
             StrongFitContext context,
             UserManager<IdentityUser> userManager,
-            RoleManager<IdentityRole> roleManager,
-            ILogger<DiagnosticController> logger)
+            RoleManager<IdentityRole> roleManager)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
-            _logger = logger;
         }
 
         public async Task<IActionResult> Status()
         {
-            var statusInfo = new Dictionary<string, object>();
-
-            // Verificar autenticação
-            if (User.Identity.IsAuthenticated)
+            var model = new DiagnosticViewModel
             {
-                var user = await _userManager.GetUserAsync(User);
-                var roles = await _userManager.GetRolesAsync(user);
+                DatabaseStatus = await CheckDatabaseStatus(),
+                TablesStatus = await CheckTablesStatus(),
+                UsersCount = await _userManager.Users.CountAsync(),
+                RolesCount = await _roleManager.Roles.CountAsync(),
+                PersonalsCount = await _context.Personals.CountAsync(),
+                AlunosCount = await _context.Alunos.CountAsync(),
+                ExerciciosCount = await _context.Exercicios.CountAsync(),
+                TreinosCount = await _context.Treinos.CountAsync()
+            };
 
-                statusInfo.Add("IsAuthenticated", true);
-                statusInfo.Add("UserName", User.Identity.Name);
-                statusInfo.Add("Roles", roles.ToList());
-            }
-            else
-            {
-                statusInfo.Add("IsAuthenticated", false);
-                statusInfo.Add("UserName", "Não autenticado");
-                statusInfo.Add("Roles", new List<string>());
-            }
-
-            // Verificar contagem de entidades
-            try
-            {
-                statusInfo.Add("PersonalCount", await _context.Personals.CountAsync());
-                statusInfo.Add("AlunoCount", await _context.Alunos.CountAsync());
-                statusInfo.Add("TreinoCount", await _context.Treinos.CountAsync());
-                statusInfo.Add("ExercicioCount", await _context.Exercicios.CountAsync());
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao contar entidades");
-                statusInfo.Add("DatabaseError", ex.Message);
-                statusInfo.Add("PersonalCount", 0);
-                statusInfo.Add("AlunoCount", 0);
-                statusInfo.Add("TreinoCount", 0);
-                statusInfo.Add("ExercicioCount", 0);
-            }
-
-            return View(statusInfo);
+            return View(model);
         }
 
-        // Método para criar um usuário admin
-        public async Task<IActionResult> CreateAdmin()
+        private async Task<bool> CheckDatabaseStatus()
         {
             try
             {
-                // Verificar se já existe um usuário admin
-                var adminUser = await _userManager.FindByEmailAsync("admin@strongfit.com");
-
-                if (adminUser == null)
-                {
-                    // Criar usuário admin
-                    adminUser = new IdentityUser
-                    {
-                        UserName = "admin@strongfit.com",
-                        Email = "admin@strongfit.com",
-                        EmailConfirmed = true
-                    };
-
-                    var result = await _userManager.CreateAsync(adminUser, "Admin@123");
-
-                    if (result.Succeeded)
-                    {
-                        // Verificar se a role Admin existe
-                        if (!await _roleManager.RoleExistsAsync("Admin"))
-                        {
-                            await _roleManager.CreateAsync(new IdentityRole("Admin"));
-                        }
-
-                        // Adicionar usuário à role Admin
-                        await _userManager.AddToRoleAsync(adminUser, "Admin");
-
-                        // Criar um Personal para o admin
-                        var personal = new Personal
-                        {
-                            Nome = "Administrador",
-                            Especialidade = "Administração",
-                            Email = "admin@strongfit.com"
-                        };
-
-                        _context.Personals.Add(personal);
-                        await _context.SaveChangesAsync();
-
-                        return View("AdminCreated", "Usuário admin criado com sucesso! Email: admin@strongfit.com, Senha: Admin@123");
-                    }
-                    else
-                    {
-                        return View("AdminCreated", $"Erro ao criar usuário admin: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    }
-                }
-                else
-                {
-                    return View("AdminCreated", "Usuário admin já existe!");
-                }
+                return await _context.Database.CanConnectAsync();
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Erro ao criar usuário admin");
-                return View("AdminCreated", $"Erro: {ex.Message}");
+                return false;
             }
         }
 
-        // Método para limpar e recriar o banco de dados
+        private async Task<List<TableStatus>> CheckTablesStatus()
+        {
+            var tables = new List<TableStatus>();
+
+            try
+            {
+                // Verificar tabelas principais
+                tables.Add(new TableStatus
+                {
+                    Name = "AspNetUsers",
+                    Exists = await _context.Database.ExecuteSqlRawAsync("SELECT COUNT(*) FROM AspNetUsers") >= 0,
+                    RecordsCount = await _userManager.Users.CountAsync()
+                });
+
+                tables.Add(new TableStatus
+                {
+                    Name = "AspNetRoles",
+                    Exists = await _context.Database.ExecuteSqlRawAsync("SELECT COUNT(*) FROM AspNetRoles") >= 0,
+                    RecordsCount = await _roleManager.Roles.CountAsync()
+                });
+
+                tables.Add(new TableStatus
+                {
+                    Name = "Personals",
+                    Exists = await _context.Database.ExecuteSqlRawAsync("SELECT COUNT(*) FROM Personals") >= 0,
+                    RecordsCount = await _context.Personals.CountAsync()
+                });
+
+                tables.Add(new TableStatus
+                {
+                    Name = "Alunos",
+                    Exists = await _context.Database.ExecuteSqlRawAsync("SELECT COUNT(*) FROM Alunos") >= 0,
+                    RecordsCount = await _context.Alunos.CountAsync()
+                });
+
+                tables.Add(new TableStatus
+                {
+                    Name = "Exercicios",
+                    Exists = await _context.Database.ExecuteSqlRawAsync("SELECT COUNT(*) FROM Exercicios") >= 0,
+                    RecordsCount = await _context.Exercicios.CountAsync()
+                });
+
+                tables.Add(new TableStatus
+                {
+                    Name = "Treinos",
+                    Exists = await _context.Database.ExecuteSqlRawAsync("SELECT COUNT(*) FROM Treinos") >= 0,
+                    RecordsCount = await _context.Treinos.CountAsync()
+                });
+            }
+            catch (Exception ex)
+            {
+                // Adicionar informações sobre o erro
+                tables.Add(new TableStatus
+                {
+                    Name = "Erro",
+                    Exists = false,
+                    RecordsCount = 0,
+                    ErrorMessage = ex.Message
+                });
+            }
+
+            return tables;
+        }
+
+        [HttpPost]
         public async Task<IActionResult> ResetDatabase()
         {
             try
             {
-                // Excluir todos os dados
-                var exercicios = await _context.Exercicios.ToListAsync();
-                _context.Exercicios.RemoveRange(exercicios);
+                // Remover todos os dados existentes
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM TreinoExercicio");
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM Treinos");
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM Exercicios");
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM Alunos");
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM Personals");
 
-                var treinos = await _context.Treinos.ToListAsync();
-                _context.Treinos.RemoveRange(treinos);
+                // Inicializar o banco de dados com dados de exemplo
+                await DbInitializer.InitializeDatabaseAsync(_context);
 
-                var alunos = await _context.Alunos.ToListAsync();
-                _context.Alunos.RemoveRange(alunos);
-
-                var personals = await _context.Personals.ToListAsync();
-                _context.Personals.RemoveRange(personals);
-
-                await _context.SaveChangesAsync();
-
-                // Recriar dados iniciais
-                var seeder = new DataSeeder(_context, _userManager, _roleManager);
-                await seeder.SeedAsync();
-
-                return View("AdminCreated", "Banco de dados limpo e recriado com sucesso!");
+                TempData["Message"] = "Banco de dados reinicializado com sucesso!";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao resetar banco de dados");
-                return View("AdminCreated", $"Erro ao resetar banco de dados: {ex.Message}");
+                TempData["Error"] = $"Erro ao reinicializar o banco de dados: {ex.Message}";
             }
+
+            return RedirectToAction("Status");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SeedDatabase()
+        {
+            try
+            {
+                // Inicializar o banco de dados com dados de exemplo
+                await DbInitializer.InitializeDatabaseAsync(_context);
+
+                TempData["Message"] = "Dados de exemplo adicionados com sucesso!";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Erro ao adicionar dados de exemplo: {ex.Message}";
+            }
+
+            return RedirectToAction("Status");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> TestRegisterAluno()
+        {
+            try
+            {
+                // Verificar se existe pelo menos um personal
+                var personal = await _context.Personals.FirstOrDefaultAsync();
+                if (personal == null)
+                {
+                    TempData["Error"] = "Não existe nenhum personal cadastrado. Cadastre um personal primeiro.";
+                    return RedirectToAction("Status");
+                }
+
+                // Criar um usuário de teste
+                var testEmail = $"teste_{DateTime.Now.Ticks}@strongfit.com";
+                var user = new IdentityUser { UserName = testEmail, Email = testEmail, EmailConfirmed = true };
+                var result = await _userManager.CreateAsync(user, "Teste@123");
+
+                if (!result.Succeeded)
+                {
+                    TempData["Error"] = $"Erro ao criar usuário: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+                    return RedirectToAction("Status");
+                }
+
+                // Adicionar à role Aluno
+                if (!await _roleManager.RoleExistsAsync("Aluno"))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole("Aluno"));
+                }
+                await _userManager.AddToRoleAsync(user, "Aluno");
+
+                // Criar o aluno
+                var aluno = new Aluno
+                {
+                    Nome = "Aluno Teste",
+                    Email = testEmail,
+                    Data_Nascimento = DateTime.Now.AddYears(-20),
+                    Telefone = "(00) 00000-0000",
+                    Instagram = "@alunoteste",
+                    PersonalID = personal.PersonalID,
+                    Observacoes = "Aluno de teste criado pelo diagnóstico"
+                };
+
+                _context.Alunos.Add(aluno);
+                await _context.SaveChangesAsync();
+
+                TempData["Message"] = $"Aluno de teste criado com sucesso! ID: {aluno.AlunoID}, Email: {testEmail}";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Erro ao criar aluno de teste: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    TempData["Error"] += $" | Erro interno: {ex.InnerException.Message}";
+                }
+            }
+
+            return RedirectToAction("Status");
         }
     }
 }

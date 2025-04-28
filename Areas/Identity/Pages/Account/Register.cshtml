@@ -16,7 +16,7 @@
 
                     <div class="form-group mb-3">
                         <label asp-for="Input.UserType" class="form-label">Tipo de Usuário</label>
-                        <select asp-for="Input.UserType" class="form-control" id="userTypeSelect">
+                        <select asp-for="Input.UserType" class="form-control" id="Input_UserType">
                             <option value="">Selecione o tipo de usuário</option>
                             <option value="Personal">Personal</option>
                             <option value="Aluno">Aluno</option>
@@ -35,7 +35,7 @@
 
                             <div class="form-group mb-3">
                                 <label asp-for="Input.Email" class="form-label">Email</label>
-                                <input asp-for="Input.Email" class="form-control" autocomplete="username" />
+                                <input asp-for="Input.Email" class="form-control" autocomplete="email" />
                                 <span asp-validation-for="Input.Email" class="text-danger"></span>
                             </div>
 
@@ -67,7 +67,7 @@
 
                             <div class="form-group mb-3">
                                 <label asp-for="Input.Telefone" class="form-label">Telefone</label>
-                                <input asp-for="Input.Telefone" class="form-control" />
+                                <input asp-for="Input.Telefone" class="form-control" autocomplete="tel" />
                                 <span asp-validation-for="Input.Telefone" class="text-danger"></span>
                             </div>
 
@@ -110,7 +110,7 @@
         $(document).ready(function() {
             // Função para mostrar/esconder campos com base no tipo de usuário
             function toggleFields() {
-                var selectedType = $('#userTypeSelect').val();
+                var selectedType = $('#Input_UserType').val();
 
                 if (selectedType === 'Personal') {
                     $('.personal-field').show();
@@ -137,7 +137,7 @@
             toggleFields();
 
             // Executar quando o select mudar
-            $('#userTypeSelect').change(toggleFields);
+            $('#Input_UserType').change(toggleFields);
         });
     </script>
 }

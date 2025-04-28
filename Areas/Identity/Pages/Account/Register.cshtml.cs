@@ -2,21 +2,17 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Text;
-using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
-using StrongFitApp.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using StrongFitApp.Data;
+using StrongFitApp.Models;
 
 namespace StrongFitApp.Areas.Identity.Pages.Account
 {
@@ -44,161 +40,301 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
         }
 
         [BindProperty]
-        public InputModel Input { get; set; }
+        public InputModel Input { get; set; } = new InputModel();
 
-        public string ReturnUrl { get; set; }
+        public string ReturnUrl { get; set; } = string.Empty;
 
-        public IList<AuthenticationScheme> ExternalLogins { get; set; }
+        public IList<AuthenticationScheme> ExternalLogins { get; set; } = new List<AuthenticationScheme>();
 
         public class InputModel
         {
             [Required(ErrorMessage = "O email é obrigatório")]
             [EmailAddress(ErrorMessage = "Email inválido")]
             [Display(Name = "Email")]
-            public string Email { get; set; }
+            public string Email { get; set; } = string.Empty;
 
             [Required(ErrorMessage = "A senha é obrigatória")]
             [StringLength(100, ErrorMessage = "A {0} deve ter pelo menos {2} e no máximo {1} caracteres.", MinimumLength = 6)]
             [DataType(DataType.Password)]
             [Display(Name = "Senha")]
-            public string Password { get; set; }
+            public string Password { get; set; } = string.Empty;
 
             [DataType(DataType.Password)]
             [Display(Name = "Confirmar senha")]
             [Compare("Password", ErrorMessage = "A senha e a confirmação de senha não correspondem.")]
-            public string ConfirmPassword { get; set; }
+            public string ConfirmPassword { get; set; } = string.Empty;
 
             [Required(ErrorMessage = "O tipo de usuário é obrigatório")]
             [Display(Name = "Tipo de Usuário")]
-            public string UserType { get; set; }
+            public string UserType { get; set; } = string.Empty;
 
             [Required(ErrorMessage = "O nome é obrigatório")]
             [Display(Name = "Nome")]
-            public string Nome { get; set; }
+            public string Nome { get; set; } = string.Empty;
 
             [Display(Name = "Especialidade")]
-            public string Especialidade { get; set; }
+            public string? Especialidade { get; set; }
 
             [Display(Name = "Data de Nascimento")]
             [DataType(DataType.Date)]
             public DateTime? DataNascimento { get; set; }
 
             [Display(Name = "Telefone")]
-            public string Telefone { get; set; }
+            public string? Telefone { get; set; }
 
             [Display(Name = "Instagram")]
-            public string Instagram { get; set; }
+            public string? Instagram { get; set; }
 
             [Display(Name = "Personal")]
             public int? PersonalID { get; set; }
         }
 
-        public async Task OnGetAsync(string returnUrl = null)
+        public async Task OnGetAsync(string? returnUrl = null)
         {
-            ReturnUrl = returnUrl;
+            ReturnUrl = returnUrl ?? Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-            await CarregarPersonals();
+
+            try
+            {
+                await CarregarPersonals();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao carregar personals");
+                ModelState.AddModelError(string.Empty, "Erro ao carregar a lista de personals. Verifique se o banco de dados está configurado corretamente.");
+            }
         }
 
         private async Task CarregarPersonals()
         {
-            ViewData["PersonalID"] = new SelectList(await _context.Personals.ToListAsync(), "PersonalID", "Nome");
+            try
+            {
+                // Verificar se a tabela existe e tem as colunas necessárias
+                if (_context.Database.CanConnect())
+                {
+                    var personals = await _context.Personals.ToListAsync();
+                    ViewData["PersonalID"] = new SelectList(personals, "PersonalID", "Nome");
+                    _logger.LogInformation("Personals carregados com sucesso: {Count}", personals.Count);
+                }
+                else
+                {
+                    _logger.LogWarning("Não foi possível conectar ao banco de dados");
+                    ViewData["PersonalID"] = new SelectList(new List<Personal>(), "PersonalID", "Nome");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao carregar personals");
+                ViewData["PersonalID"] = new SelectList(new List<Personal>(), "PersonalID", "Nome");
+            }
         }
 
-        public async Task<IActionResult> OnPostAsync(string returnUrl = null)
+        public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
-            // Recarregar a lista de personals para o caso de erro e precisar mostrar a página novamente
-            await CarregarPersonals();
-
-            // Validação manual para o tipo de usuário Aluno que precisa de um Personal
-            if (Input.UserType == "Aluno" && !Input.PersonalID.HasValue)
+            try
             {
-                ModelState.AddModelError("Input.PersonalID", "É necessário selecionar um Personal.");
-            }
+                // Adicionar log para depuração
+                _logger.LogInformation("Iniciando processo de registro para: {Email}, Tipo: {UserType}", Input.Email, Input.UserType);
 
-            if (ModelState.IsValid)
-            {
-                try
+                ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+                // Recarregar a lista de personals para o caso de erro e precisar mostrar a página novamente
+                await CarregarPersonals();
+
+                // Validação manual para o tipo de usuário Aluno que precisa de um Personal
+                if (Input.UserType == "Aluno" && !Input.PersonalID.HasValue)
                 {
+                    ModelState.AddModelError("Input.PersonalID", "É necessário selecionar um Personal.");
+                    _logger.LogWarning("Tentativa de registro de aluno sem personal selecionado");
+                    return Page();
+                }
+
+                if (ModelState.IsValid)
+                {
+                    _logger.LogInformation("ModelState válido, prosseguindo com o registro");
+
+                    // Verificar se o email já está em uso
+                    var existingUser = await _userManager.FindByEmailAsync(Input.Email);
+                    if (existingUser != null)
+                    {
+                        ModelState.AddModelError("Input.Email", "Este email já está em uso.");
+                        _logger.LogWarning("Email já em uso: {Email}", Input.Email);
+                        return Page();
+                    }
+
+                    // Criar o usuário
                     var user = new IdentityUser { UserName = Input.Email, Email = Input.Email, EmailConfirmed = true };
                     var result = await _userManager.CreateAsync(user, Input.Password);
 
                     if (result.Succeeded)
                     {
-                        _logger.LogInformation("User created a new account with password.");
+                        _logger.LogInformation("Usuário criado com sucesso: {Email}", Input.Email);
 
                         // Verificar se a role existe, se não, criar
                         if (!await _roleManager.RoleExistsAsync(Input.UserType))
                         {
+                            _logger.LogInformation("Criando role: {Role}", Input.UserType);
                             var roleResult = await _roleManager.CreateAsync(new IdentityRole(Input.UserType));
                             if (!roleResult.Succeeded)
                             {
                                 foreach (var error in roleResult.Errors)
                                 {
                                     ModelState.AddModelError(string.Empty, $"Erro ao criar role: {error.Description}");
+                                    _logger.LogError("Erro ao criar role: {Error}", error.Description);
                                 }
+                                await _userManager.DeleteAsync(user);
                                 return Page();
                             }
                         }
 
                         // Adicionar usuário à role
+                        _logger.LogInformation("Adicionando usuário à role: {Role}", Input.UserType);
                         var addToRoleResult = await _userManager.AddToRoleAsync(user, Input.UserType);
                         if (!addToRoleResult.Succeeded)
                         {
                             foreach (var error in addToRoleResult.Errors)
                             {
                                 ModelState.AddModelError(string.Empty, $"Erro ao adicionar à role: {error.Description}");
+                                _logger.LogError("Erro ao adicionar à role: {Error}", error.Description);
                             }
-                            // Remover o usuário criado já que não conseguimos adicionar à role
                             await _userManager.DeleteAsync(user);
                             return Page();
                         }
 
                         // Criar entidade correspondente (Personal ou Aluno)
-                        if (Input.UserType == "Personal")
+                        try
                         {
-                            var personal = new Personal
+                            if (Input.UserType == "Personal")
                             {
-                                Nome = Input.Nome,
-                                Especialidade = Input.Especialidade ?? "",
-                                Email = Input.Email,
-                                Telefone = Input.Telefone ?? "",
-                                Instagram = Input.Instagram ?? ""
-                            };
+                                _logger.LogInformation("Criando personal: {Nome}", Input.Nome);
+                                // Verificar se já existe um personal com este email
+                                var existingPersonal = await _context.Personals.FirstOrDefaultAsync(p => p.Email == Input.Email);
+                                if (existingPersonal != null)
+                                {
+                                    ModelState.AddModelError("Input.Email", "Já existe um personal com este email.");
+                                    _logger.LogWarning("Personal já existe com este email: {Email}", Input.Email);
+                                    await _userManager.DeleteAsync(user);
+                                    return Page();
+                                }
 
-                            _context.Personals.Add(personal);
-                            await _context.SaveChangesAsync();
+                                var personal = new Personal
+                                {
+                                    Nome = Input.Nome,
+                                    Email = Input.Email,
+                                    Especialidade = Input.Especialidade ?? "Geral",
+                                    Telefone = Input.Telefone,
+                                    Instagram = Input.Instagram
+                                };
 
-                            await _signInManager.SignInAsync(user, isPersistent: false);
-                            return LocalRedirect("~/Home/Index");
-                        }
-                        else if (Input.UserType == "Aluno")
-                        {
-                            var aluno = new Aluno
+                                _context.Personals.Add(personal);
+                                await _context.SaveChangesAsync();
+                                _logger.LogInformation("Personal criado com sucesso: {ID}", personal.PersonalID);
+
+                                await _signInManager.SignInAsync(user, isPersistent: false);
+                                return LocalRedirect("~/Home/Index");
+                            }
+                            else if (Input.UserType == "Aluno")
                             {
-                                Nome = Input.Nome,
-                                Email = Input.Email,
-                                Data_Nascimento = Input.DataNascimento ?? DateTime.Now,
-                                Telefone = Input.Telefone ?? "",
-                                Instagram = Input.Instagram ?? "",
-                                PersonalID = Input.PersonalID.Value,
-                                Observacoes = ""
-                            };
+                                _logger.LogInformation("Criando aluno: {Nome}", Input.Nome);
+                                // Verificar se já existe um aluno com este email
+                                var existingAluno = await _context.Alunos.FirstOrDefaultAsync(a => a.Email == Input.Email);
+                                if (existingAluno != null)
+                                {
+                                    ModelState.AddModelError("Input.Email", "Já existe um aluno com este email.");
+                                    _logger.LogWarning("Aluno já existe com este email: {Email}", Input.Email);
+                                    await _userManager.DeleteAsync(user);
+                                    return Page();
+                                }
 
-                            _context.Alunos.Add(aluno);
-                            await _context.SaveChangesAsync();
+                                // Verificar se o personal existe
+                                if (Input.PersonalID.HasValue)
+                                {
+                                    var personal = await _context.Personals.FindAsync(Input.PersonalID.Value);
+                                    if (personal == null)
+                                    {
+                                        ModelState.AddModelError("Input.PersonalID", "O personal selecionado não existe.");
+                                        _logger.LogWarning("Personal não encontrado: {ID}", Input.PersonalID.Value);
+                                        await _userManager.DeleteAsync(user);
+                                        return Page();
+                                    }
 
-                            await _signInManager.SignInAsync(user, isPersistent: false);
-                            return LocalRedirect("~/Treinos/MeusTreinos");
+                                    _logger.LogInformation("Personal encontrado: {ID}", personal.PersonalID);
+                                }
+                                else
+                                {
+                                    ModelState.AddModelError("Input.PersonalID", "É necessário selecionar um Personal.");
+                                    _logger.LogWarning("Tentativa de registro de aluno sem personal selecionado");
+                                    await _userManager.DeleteAsync(user);
+                                    return Page();
+                                }
+
+                                // Log dos valores que serão usados para criar o aluno
+                                _logger.LogInformation("Valores para criar aluno: Nome={Nome}, Email={Email}, DataNascimento={DataNascimento}, PersonalID={PersonalID}",
+                                    Input.Nome, Input.Email, Input.DataNascimento, Input.PersonalID);
+
+                                var aluno = new Aluno
+                                {
+                                    Nome = Input.Nome,
+                                    Email = Input.Email,
+                                    Data_Nascimento = Input.DataNascimento ?? DateTime.Now,
+                                    Telefone = Input.Telefone ?? "",
+                                    Instagram = Input.Instagram ?? "",
+                                    PersonalID = Input.PersonalID!.Value,
+                                    Observacoes = ""
+                                };
+
+                                _logger.LogInformation("Objeto aluno criado: {Aluno}",
+                                    $"Nome={aluno.Nome}, Email={aluno.Email}, Data_Nascimento={aluno.Data_Nascimento}, PersonalID={aluno.PersonalID}");
+
+                                _context.Alunos.Add(aluno);
+
+                                _logger.LogInformation("Salvando aluno no banco de dados...");
+                                await _context.SaveChangesAsync();
+                                _logger.LogInformation("Aluno criado com sucesso: {ID}", aluno.AlunoID);
+
+                                await _signInManager.SignInAsync(user, isPersistent: false);
+                                return LocalRedirect("~/Treinos/MeusTreinos");
+                            }
+                            else if (Input.UserType == "Admin")
+                            {
+                                // Para Admin, não precisamos criar entidade adicional
+                                _logger.LogInformation("Criando admin: {Email}", Input.Email);
+                                await _signInManager.SignInAsync(user, isPersistent: false);
+                                return LocalRedirect("~/Home/Index");
+                            }
                         }
-                        else if (Input.UserType == "Admin")
+                        catch (DbUpdateException dbEx)
                         {
-                            // Para Admin, não precisamos criar entidade adicional
-                            await _signInManager.SignInAsync(user, isPersistent: false);
-                            return LocalRedirect("~/Home/Index");
+                            _logger.LogError(dbEx, "Erro ao salvar no banco de dados");
+
+                            // Remover o usuário criado já que não conseguimos salvar a entidade
+                            await _userManager.DeleteAsync(user);
+
+                            // Tentar obter detalhes mais específicos do erro
+                            if (dbEx.InnerException != null)
+                            {
+                                ModelState.AddModelError(string.Empty, $"Erro ao salvar no banco de dados: {dbEx.InnerException.Message}");
+                                _logger.LogError("Erro interno: {Message}", dbEx.InnerException.Message);
+                            }
+                            else
+                            {
+                                ModelState.AddModelError(string.Empty, "Erro ao salvar no banco de dados. Verifique se todos os campos estão preenchidos corretamente.");
+                            }
+
+                            return Page();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Erro ao criar entidade");
+
+                            // Remover o usuário criado já que não conseguimos salvar a entidade
+                            await _userManager.DeleteAsync(user);
+
+                            ModelState.AddModelError(string.Empty, $"Erro ao criar entidade: {ex.Message}");
+
+                            return Page();
                         }
 
                         await _signInManager.SignInAsync(user, isPersistent: false);
@@ -208,12 +344,30 @@ namespace StrongFitApp.Areas.Identity.Pages.Account
                     foreach (var error in result.Errors)
                     {
                         ModelState.AddModelError(string.Empty, error.Description);
+                        _logger.LogError("Erro ao criar usuário: {Error}", error.Description);
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    // Log da exceção
-                    _logger.LogError(ex, "Erro ao registrar usuário");
+                    _logger.LogWarning("ModelState inválido. Erros: {Errors}",
+                        string.Join(", ", ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)));
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log da exceção
+                _logger.LogError(ex, "Erro ao registrar usuário: {Message}", ex.Message);
+
+                // Tentar obter detalhes mais específicos do erro
+                if (ex.InnerException != null)
+                {
+                    ModelState.AddModelError(string.Empty, $"Ocorreu um erro: {ex.InnerException.Message}");
+                    _logger.LogError("Erro interno: {Message}", ex.InnerException.Message);
+                }
+                else
+                {
                     ModelState.AddModelError(string.Empty, $"Ocorreu um erro: {ex.Message}");
                 }
             }

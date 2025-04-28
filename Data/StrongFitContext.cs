@@ -4,7 +4,6 @@ using StrongFitApp.Models;
 
 namespace StrongFitApp.Data
 {
-    // IMPORTANTE: tem q herdar do IdentityDbContext
     public class StrongFitContext : IdentityDbContext
     {
         public StrongFitContext(DbContextOptions<StrongFitContext> options)
@@ -14,26 +13,30 @@ namespace StrongFitApp.Data
 
         public DbSet<Personal> Personals { get; set; }
         public DbSet<Aluno> Alunos { get; set; }
-        public DbSet<Treino> Treinos { get; set; }
         public DbSet<Exercicio> Exercicios { get; set; }
+        public DbSet<Treino> Treinos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // IMPORTANTE:  chamada base cria as tabelas do Identity
             base.OnModelCreating(modelBuilder);
 
-            // tabelas da aplicação
-            modelBuilder.Entity<Personal>().ToTable("Personals");
-            modelBuilder.Entity<Aluno>().ToTable("Alunos");
-            modelBuilder.Entity<Treino>().ToTable("Treinos");
-            modelBuilder.Entity<Exercicio>().ToTable("Exercicios");
+            // Configurar relacionamento muitos-para-muitos entre Treino e Exercicio
+            modelBuilder.Entity<Treino>()
+                .HasMany(t => t.Exercicios)
+                .WithMany(e => e.Treinos)
+                .UsingEntity(j => j.ToTable("TreinoExercicio"));
 
-            //relacionamento entre Treino e Exercicio
-            modelBuilder.Entity<Exercicio>()
-                .HasOne(e => e.Treino)
-                .WithMany(t => t.Exercicios)
-                .HasForeignKey(e => e.TreinoID)
-                .OnDelete(DeleteBehavior.SetNull);
+            // Configurar relacionamento entre Aluno e Personal
+            modelBuilder.Entity<Aluno>()
+                .HasOne(a => a.Personal)
+                .WithMany(p => p.Alunos)
+                .HasForeignKey(a => a.PersonalID);
+
+            // Configurar relacionamento entre Treino e Aluno
+            modelBuilder.Entity<Treino>()
+                .HasOne(t => t.Aluno)
+                .WithMany(a => a.Treinos)
+                .HasForeignKey(t => t.AlunoID);
         }
     }
 }

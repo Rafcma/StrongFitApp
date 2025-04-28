@@ -1,15 +1,17 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using StrongFitApp.Data;
 using StrongFitApp.Models;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace StrongFitApp.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin, Personal")]
     public class ExerciciosController : Controller
     {
         private readonly StrongFitContext _context;
@@ -22,22 +24,18 @@ namespace StrongFitApp.Controllers
         // GET: Exercicios
         public async Task<IActionResult> Index()
         {
-            var exercicios = await _context.Exercicios
-                .Include(e => e.Treino)
-                .ToListAsync();
-            return View(exercicios);
+            return View(await _context.Exercicios.ToListAsync());
         }
 
         // GET: Exercicios/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Exercicios == null)
             {
                 return NotFound();
             }
 
             var exercicio = await _context.Exercicios
-                .Include(e => e.Treino)
                 .FirstOrDefaultAsync(m => m.ExercicioID == id);
             if (exercicio == null)
             {
@@ -48,15 +46,21 @@ namespace StrongFitApp.Controllers
         }
 
         // GET: Exercicios/Create
-        public IActionResult Create(int? treinoId)
+        public IActionResult Create()
         {
-            ViewData["TreinoID"] = new SelectList(_context.Treinos, "TreinoID", "TreinoID");
-
-            if (treinoId.HasValue)
+            // Lista de categorias para o dropdown
+            ViewBag.Categorias = new List<string>
             {
-                var exercicio = new Exercicio { TreinoID = treinoId.Value };
-                return View(exercicio);
-            }
+                "Peito",
+                "Costas",
+                "Pernas",
+                "Ombros",
+                "Braços",
+                "Abdômen",
+                "Cardio",
+                "Funcional",
+                "Alongamento"
+            };
 
             return View();
         }
@@ -64,29 +68,36 @@ namespace StrongFitApp.Controllers
         // POST: Exercicios/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ExercicioID,Nome,Descricao,Categoria,TreinoID")] Exercicio exercicio)
+        public async Task<IActionResult> Create([Bind("ExercicioID,Nome,Descricao,Categoria,Series,Repeticoes")] Exercicio exercicio)
         {
             if (ModelState.IsValid)
             {
                 _context.Add(exercicio);
                 await _context.SaveChangesAsync();
-
-                if (exercicio.TreinoID.HasValue)
-                {
-                    return RedirectToAction("Details", "Treinos", new { id = exercicio.TreinoID.Value });
-                }
-
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["TreinoID"] = new SelectList(_context.Treinos, "TreinoID", "TreinoID", exercicio.TreinoID);
+            // Lista de categorias para o dropdown em caso de erro
+            ViewBag.Categorias = new List<string>
+            {
+                "Peito",
+                "Costas",
+                "Pernas",
+                "Ombros",
+                "Braços",
+                "Abdômen",
+                "Cardio",
+                "Funcional",
+                "Alongamento"
+            };
+
             return View(exercicio);
         }
 
         // GET: Exercicios/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Exercicios == null)
             {
                 return NotFound();
             }
@@ -97,14 +108,27 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            ViewData["TreinoID"] = new SelectList(_context.Treinos, "TreinoID", "TreinoID", exercicio.TreinoID);
+            // Lista de categorias para o dropdown
+            ViewBag.Categorias = new List<string>
+            {
+                "Peito",
+                "Costas",
+                "Pernas",
+                "Ombros",
+                "Braços",
+                "Abdômen",
+                "Cardio",
+                "Funcional",
+                "Alongamento"
+            };
+
             return View(exercicio);
         }
 
         // POST: Exercicios/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("ExercicioID,Nome,Descricao,Categoria,TreinoID")] Exercicio exercicio)
+        public async Task<IActionResult> Edit(int id, [Bind("ExercicioID,Nome,Descricao,Categoria,Series,Repeticoes")] Exercicio exercicio)
         {
             if (id != exercicio.ExercicioID)
             {
@@ -129,29 +153,35 @@ namespace StrongFitApp.Controllers
                         throw;
                     }
                 }
-
-                if (exercicio.TreinoID.HasValue)
-                {
-                    return RedirectToAction("Details", "Treinos", new { id = exercicio.TreinoID.Value });
-                }
-
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["TreinoID"] = new SelectList(_context.Treinos, "TreinoID", "TreinoID", exercicio.TreinoID);
+            // Lista de categorias para o dropdown em caso de erro
+            ViewBag.Categorias = new List<string>
+            {
+                "Peito",
+                "Costas",
+                "Pernas",
+                "Ombros",
+                "Braços",
+                "Abdômen",
+                "Cardio",
+                "Funcional",
+                "Alongamento"
+            };
+
             return View(exercicio);
         }
 
         // GET: Exercicios/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Exercicios == null)
             {
                 return NotFound();
             }
 
             var exercicio = await _context.Exercicios
-                .Include(e => e.Treino)
                 .FirstOrDefaultAsync(m => m.ExercicioID == id);
             if (exercicio == null)
             {
@@ -166,23 +196,23 @@ namespace StrongFitApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var exercicio = await _context.Exercicios.FindAsync(id);
-            var treinoId = exercicio.TreinoID;
-
-            _context.Exercicios.Remove(exercicio);
-            await _context.SaveChangesAsync();
-
-            if (treinoId.HasValue)
+            if (_context.Exercicios == null)
             {
-                return RedirectToAction("Details", "Treinos", new { id = treinoId.Value });
+                return Problem("Entity set 'StrongFitContext.Exercicios'  is null.");
+            }
+            var exercicio = await _context.Exercicios.FindAsync(id);
+            if (exercicio != null)
+            {
+                _context.Exercicios.Remove(exercicio);
             }
 
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         private bool ExercicioExists(int id)
         {
-            return _context.Exercicios.Any(e => e.ExercicioID == id);
+            return (_context.Exercicios?.Any(e => e.ExercicioID == id)).GetValueOrDefault();
         }
     }
 }

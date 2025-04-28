@@ -1,0 +1,15 @@
+﻿@{
+    ViewData["Title"] = "Bem-vindo à StrongFit";
+    Layout = "_Layout"; // Usando o layout padrão
+}
+
+<div class="text-center">
+    <h1 class="display-4">Bem-vindo à StrongFit</h1>
+    <p>Acesse o portal para gerenciar seus treinos e alunos.</p>
+
+    <div class="mt-4">
+        <a href="@Url.Action("Index", "Home")" class="btn btn-primary btn-lg">
+            <i class="fas fa-sign-in-alt me-2"></i>Acessar Portal StrongFit
+        </a>
+    </div>
+</div>

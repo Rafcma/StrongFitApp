@@ -1,33 +1,34 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace StrongFitApp.Models
 {
     public class Exercicio
     {
+        [Key]
         public int ExercicioID { get; set; }
 
         [Required(ErrorMessage = "O nome é obrigatório")]
-        [StringLength(100, ErrorMessage = "O nome deve ter no máximo 100 caracteres")]
-        [Display(Name = "Nome")]
-        public string Nome { get; set; }
+        [StringLength(100)]
+        public string Nome { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "A descrição é obrigatória")]
-        [StringLength(500, ErrorMessage = "A descrição deve ter no máximo 500 caracteres")]
-        [Display(Name = "Descrição")]
-        public string Descricao { get; set; }
+        [StringLength(500)]
+        public string? Descricao { get; set; }
 
         [Required(ErrorMessage = "A categoria é obrigatória")]
-        [StringLength(50, ErrorMessage = "A categoria deve ter no máximo 50 caracteres")]
-        [Display(Name = "Categoria")]
-        public string Categoria { get; set; }
+        [StringLength(50)]
+        public string Categoria { get; set; } = string.Empty;
 
-        // Adicionando propriedade TreinoID que estava faltando
-        [Display(Name = "Treino")]
-        public int? TreinoID { get; set; }
+        // Adicionando as propriedades que estavam faltando
+        [Range(1, 20, ErrorMessage = "O número de séries deve estar entre 1 e 20")]
+        public int Series { get; set; } = 3;
 
-        // Adicionando relacionamento com Treino
-        [ForeignKey("TreinoID")]
-        public Treino Treino { get; set; }
+        [Range(1, 100, ErrorMessage = "O número de repetições deve estar entre 1 e 100")]
+        public int Repeticoes { get; set; } = 12;
+
+        // Relacionamento com Treinos (muitos para muitos)
+        public virtual ICollection<Treino>? Treinos { get; set; }
     }
 }

@@ -26,6 +26,11 @@
                                 <i class="fas fa-home me-1"></i>Home
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-controller="Landing" asp-action="Index">
+                                <i class="fas fa-globe me-1"></i>Site Público
+                            </a>
+                        </li>
                         @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Personal"))
                         {
                             <li class="nav-item">

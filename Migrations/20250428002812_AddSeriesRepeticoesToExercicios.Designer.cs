@@ -12,8 +12,8 @@ using StrongFitApp.Data;
 namespace StrongFitApp.Migrations
 {
     [DbContext(typeof(StrongFitContext))]
-    [Migration("20250416212325_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250428002812_AddSeriesRepeticoesToExercicios")]
+    partial class AddSeriesRepeticoesToExercicios
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,21 @@ namespace StrongFitApp.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("ExercicioTreino", b =>
+                {
+                    b.Property<int>("ExerciciosExercicioID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TreinosTreinoID")
+                        .HasColumnType("int");
+
+                    b.HasKey("ExerciciosExercicioID", "TreinosTreinoID");
+
+                    b.HasIndex("TreinosTreinoID");
+
+                    b.ToTable("TreinoExercicio", (string)null);
+                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -170,10 +185,12 @@ namespace StrongFitApp.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("ProviderDisplayName")
                         .HasColumnType("nvarchar(max)");
@@ -210,10 +227,12 @@ namespace StrongFitApp.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("Value")
                         .HasColumnType("nvarchar(max)");
@@ -239,8 +258,8 @@ namespace StrongFitApp.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Instagram")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -248,21 +267,21 @@ namespace StrongFitApp.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Observacoes")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("PersonalID")
                         .HasColumnType("int");
 
                     b.Property<string>("Telefone")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("AlunoID");
 
                     b.HasIndex("PersonalID");
 
-                    b.ToTable("Alunos", (string)null);
+                    b.ToTable("Alunos");
                 });
 
             modelBuilder.Entity("StrongFitApp.Models.Exercicio", b =>
@@ -279,7 +298,6 @@ namespace StrongFitApp.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Descricao")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
@@ -288,14 +306,15 @@ namespace StrongFitApp.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("TreinoID")
+                    b.Property<int>("Repeticoes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Series")
                         .HasColumnType("int");
 
                     b.HasKey("ExercicioID");
 
-                    b.HasIndex("TreinoID");
-
-                    b.ToTable("Exercicios", (string)null);
+                    b.ToTable("Exercicios");
                 });
 
             modelBuilder.Entity("StrongFitApp.Models.Personal", b =>
@@ -315,14 +334,22 @@ namespace StrongFitApp.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Instagram")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Telefone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("PersonalID");
 
-                    b.ToTable("Personals", (string)null);
+                    b.ToTable("Personals");
                 });
 
             modelBuilder.Entity("StrongFitApp.Models.Treino", b =>
@@ -350,7 +377,22 @@ namespace StrongFitApp.Migrations
 
                     b.HasIndex("AlunoID");
 
-                    b.ToTable("Treinos", (string)null);
+                    b.ToTable("Treinos");
+                });
+
+            modelBuilder.Entity("ExercicioTreino", b =>
+                {
+                    b.HasOne("StrongFitApp.Models.Exercicio", null)
+                        .WithMany()
+                        .HasForeignKey("ExerciciosExercicioID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StrongFitApp.Models.Treino", null)
+                        .WithMany()
+                        .HasForeignKey("TreinosTreinoID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -415,16 +457,6 @@ namespace StrongFitApp.Migrations
                     b.Navigation("Personal");
                 });
 
-            modelBuilder.Entity("StrongFitApp.Models.Exercicio", b =>
-                {
-                    b.HasOne("StrongFitApp.Models.Treino", "Treino")
-                        .WithMany("Exercicios")
-                        .HasForeignKey("TreinoID")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Treino");
-                });
-
             modelBuilder.Entity("StrongFitApp.Models.Treino", b =>
                 {
                     b.HasOne("StrongFitApp.Models.Aluno", "Aluno")
@@ -444,11 +476,6 @@ namespace StrongFitApp.Migrations
             modelBuilder.Entity("StrongFitApp.Models.Personal", b =>
                 {
                     b.Navigation("Alunos");
-                });
-
-            modelBuilder.Entity("StrongFitApp.Models.Treino", b =>
-                {
-                    b.Navigation("Exercicios");
                 });
 #pragma warning restore 612, 618
         }

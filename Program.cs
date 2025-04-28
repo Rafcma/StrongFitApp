@@ -1,51 +1,81 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StrongFitApp.Data;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adicionar serviços ao contêiner.
+// Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<StrongFitContext>(options =>
     options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Configurar o Identity
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
-{
-    options.SignIn.RequireConfirmedAccount = false;
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequiredLength = 6;
-})
-.AddEntityFrameworkStores<StrongFitContext>()
-.AddDefaultTokenProviders();
-
-// Configurar as opções de cookie
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.LoginPath = "/Identity/Account/Login";
-    options.LogoutPath = "/Identity/Account/Logout";
-    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
-});
-
+builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false)
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<StrongFitContext>();
 builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
-
-// Adicionar o DataSeeder
-builder.Services.AddScoped<DataSeeder>();
 
 var app = builder.Build();
 
-// Configurar o pipeline de requisição HTTP.
+// Inicializar o banco de dados de forma assíncrona
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var dbContext = services.GetRequiredService<StrongFitContext>();
+
+        // Verificar se o banco de dados existe e criar se não existir
+        await dbContext.Database.EnsureCreatedAsync();
+
+        // Executar script SQL para adicionar colunas faltantes
+        var sql = @"
+            -- Verificar se a coluna Series já existe e adicioná-la se não existir
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Exercicios]') AND name = 'Series')
+            BEGIN
+                ALTER TABLE [dbo].[Exercicios]
+                ADD [Series] INT NOT NULL DEFAULT 3
+            END
+
+            -- Verificar se a coluna Repeticoes já existe e adicioná-la se não existir
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[Exercicios]') AND name = 'Repeticoes')
+            BEGIN
+                ALTER TABLE [dbo].[Exercicios]
+                ADD [Repeticoes] INT NOT NULL DEFAULT 12
+            END
+        ";
+
+        await dbContext.Database.ExecuteSqlRawAsync(sql);
+        logger.LogInformation("Script SQL para adicionar colunas executado com sucesso.");
+
+        var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        await DbInitializer.InitializeAsync(dbContext, userManager, roleManager);
+
+        logger.LogInformation("Banco de dados inicializado com sucesso.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Ocorreu um erro durante a inicialização do banco de dados.");
+    }
+}
+
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
+    app.UseMigrationsEndPoint();
 }
 else
 {
     app.UseExceptionHandler("/Home/Error");
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -57,9 +87,10 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Alterar a rota padrão para apontar para o LandingController
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Landing}/{action=Index}/{id?}");
 app.MapRazorPages();
 
 app.Run();

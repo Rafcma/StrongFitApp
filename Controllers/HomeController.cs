@@ -1,6 +1,7 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using StrongFitApp.Models;
+using System.Diagnostics;
 
 namespace StrongFitApp.Controllers
 {
@@ -27,6 +28,11 @@ namespace StrongFitApp.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        public IActionResult Welcome()
+        {
+            return View();
         }
     }
 }

@@ -58,24 +58,44 @@ namespace StrongFitApp.Controllers
         public IActionResult Create()
         {
             ViewData["AlunoID"] = new SelectList(_context.Alunos, "AlunoID", "Nome");
+            // Carregar a lista de exercícios disponíveis
+            ViewData["ExerciciosDisponiveis"] = new MultiSelectList(_context.Exercicios, "ExercicioID", "Nome");
             return View();
         }
 
         // POST: Treinos/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin, Personal")]
-        public async Task<IActionResult> Create([Bind("TreinoID,AlunoID,Data,Hora,Observacoes")] Treino treino)
+        public async Task<IActionResult> Create([Bind("TreinoID,AlunoID,Data,Hora,Observacoes")] Treino treino, int[]? selectedExercicios)
         {
             if (ModelState.IsValid)
             {
                 _context.Add(treino);
                 await _context.SaveChangesAsync();
+
+                // Adicionar exercícios selecionados ao treino
+                if (selectedExercicios != null && selectedExercicios.Length > 0)
+                {
+                    foreach (var exercicioId in selectedExercicios)
+                    {
+                        var exercicio = await _context.Exercicios.FindAsync(exercicioId);
+                        if (exercicio != null)
+                        {
+                            if (treino.Exercicios == null)
+                            {
+                                treino.Exercicios = new List<Exercicio>();
+                            }
+                            treino.Exercicios.Add(exercicio);
+                        }
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
                 return RedirectToAction(nameof(Index));
             }
             ViewData["AlunoID"] = new SelectList(_context.Alunos, "AlunoID", "Nome", treino.AlunoID);
+            ViewData["ExerciciosDisponiveis"] = new MultiSelectList(_context.Exercicios, "ExercicioID", "Nome");
             return View(treino);
         }
 
@@ -88,22 +108,36 @@ namespace StrongFitApp.Controllers
                 return NotFound();
             }
 
-            var treino = await _context.Treinos.FindAsync(id);
+            var treino = await _context.Treinos
+                .Include(t => t.Exercicios)
+                .FirstOrDefaultAsync(t => t.TreinoID == id);
+
             if (treino == null)
             {
                 return NotFound();
             }
+
             ViewData["AlunoID"] = new SelectList(_context.Alunos, "AlunoID", "Nome", treino.AlunoID);
+
+            // Carregar a lista de exercícios disponíveis
+            var exerciciosDisponiveis = await _context.Exercicios.ToListAsync();
+
+            // Obter os IDs dos exercícios já associados ao treino
+            var exerciciosSelecionados = treino.Exercicios != null
+                ? treino.Exercicios.Select(e => e.ExercicioID).ToArray()
+                : Array.Empty<int>();
+
+            ViewData["ExerciciosDisponiveis"] = new MultiSelectList(
+                exerciciosDisponiveis, "ExercicioID", "Nome", exerciciosSelecionados);
+
             return View(treino);
         }
 
         // POST: Treinos/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin, Personal")]
-        public async Task<IActionResult> Edit(int id, [Bind("TreinoID,AlunoID,Data,Hora,Observacoes")] Treino treino)
+        public async Task<IActionResult> Edit(int id, [Bind("TreinoID,AlunoID,Data,Hora,Observacoes")] Treino treino, int[]? selectedExercicios)
         {
             if (id != treino.TreinoID)
             {
@@ -114,7 +148,45 @@ namespace StrongFitApp.Controllers
             {
                 try
                 {
-                    _context.Update(treino);
+                    // Obter o treino existente com seus exercícios
+                    var treinoExistente = await _context.Treinos
+                        .Include(t => t.Exercicios)
+                        .FirstOrDefaultAsync(t => t.TreinoID == id);
+
+                    if (treinoExistente == null)
+                    {
+                        return NotFound();
+                    }
+
+                    // Atualizar propriedades básicas
+                    treinoExistente.AlunoID = treino.AlunoID;
+                    treinoExistente.Data = treino.Data;
+                    treinoExistente.Hora = treino.Hora;
+                    treinoExistente.Observacoes = treino.Observacoes;
+
+                    // Limpar exercícios existentes
+                    if (treinoExistente.Exercicios != null)
+                    {
+                        treinoExistente.Exercicios.Clear();
+                    }
+                    else
+                    {
+                        treinoExistente.Exercicios = new List<Exercicio>();
+                    }
+
+                    // Adicionar exercícios selecionados
+                    if (selectedExercicios != null && selectedExercicios.Length > 0)
+                    {
+                        foreach (var exercicioId in selectedExercicios)
+                        {
+                            var exercicio = await _context.Exercicios.FindAsync(exercicioId);
+                            if (exercicio != null)
+                            {
+                                treinoExistente.Exercicios.Add(exercicio);
+                            }
+                        }
+                    }
+
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
@@ -131,6 +203,7 @@ namespace StrongFitApp.Controllers
                 return RedirectToAction(nameof(Index));
             }
             ViewData["AlunoID"] = new SelectList(_context.Alunos, "AlunoID", "Nome", treino.AlunoID);
+            ViewData["ExerciciosDisponiveis"] = new MultiSelectList(_context.Exercicios, "ExercicioID", "Nome");
             return View(treino);
         }
 
